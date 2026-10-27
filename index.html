@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Che Pizza — senza token</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.1/tesseract.min.js"></script>
+<style>
+  :root{
+    --dough:#FBF6EC; --paper:#FFFDF8; --paperShade:#F4EFE3;
+    --tomato:#C6362A; --tomatoDark:#9E271D; --basil:#4C6B34; --basilTint:#EAF0DD;
+    --crust:#E0A11B; --ink:#2A2018; --inkSoft:#8A7A63; --line:#EAE0CC;
+    --display:'Bricolage Grotesque',system-ui,sans-serif;
+    --mono:'Space Mono',ui-monospace,monospace;
+    --body:'DM Sans',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;}
+  body{
+    font-family:var(--body); color:var(--ink); background:var(--dough);
+    background-image:
+      radial-gradient(circle at 18% 22%, rgba(255,255,255,.5) 0 1px, transparent 1px),
+      radial-gradient(circle at 72% 58%, rgba(190,150,70,.06) 0 1px, transparent 1px),
+      radial-gradient(circle at 42% 84%, rgba(190,150,70,.05) 0 1px, transparent 1px);
+    background-size:24px 24px,32px 32px,28px 28px;
+  }
+  #app{max-width:468px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;}
+  button{font-family:inherit;}
+  button:focus-visible,input:focus-visible{outline:3px solid var(--crust);outline-offset:2px;}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:4px;color:var(--tomato);font-weight:700;}
+  .label{font-family:var(--mono);font-size:11px;letter-spacing:2px;color:var(--inkSoft);font-weight:700;}
+  h1{font-family:var(--display);font-weight:800;font-size:48px;line-height:.98;margin:8px 0 0;}
+  h2{font-family:var(--display);font-weight:800;font-size:30px;margin:8px 0 4px;}
+  .lead{font-size:16px;line-height:1.5;color:var(--inkSoft);margin:14px 0 24px;max-width:340px;}
+  /* --- home: marchio --- */
+  .brand{display:flex;align-items:center;gap:11px;}
+  .brand svg{filter:drop-shadow(0 3px 6px rgba(198,54,42,.18));}
+  .wm{font-family:var(--display);font-weight:800;font-size:21px;letter-spacing:-.4px;color:var(--ink);}
+  .freebadge{margin-left:auto;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:1px;color:var(--basil);background:var(--basilTint);border:1px solid rgba(76,107,52,.28);padding:5px 10px;border-radius:999px;}
+  /* --- home: camera card --- */
+  .cameracard{position:relative;width:100%;background:radial-gradient(130% 100% at 50% 0%, #fff, var(--paper));border:1.5px solid var(--line);border-radius:24px;padding:32px 20px 26px;text-align:center;cursor:pointer;box-shadow:0 14px 34px rgba(150,100,30,.12);overflow:hidden;transition:transform .1s ease, box-shadow .2s ease;}
+  .cameracard:active{transform:translateY(1px);box-shadow:0 8px 22px rgba(150,100,30,.14);}
+  .cameracard .frame{position:absolute;inset:12px;border:2px dashed rgba(198,54,42,.28);border-radius:18px;pointer-events:none;}
+  .vfc{position:absolute;width:22px;height:22px;border:0 solid var(--tomato);border-radius:3px;}
+  .camerabtn{width:78px;height:78px;border-radius:999px;background:linear-gradient(180deg,#D6483B,var(--tomato));color:#fff;font-size:32px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;box-shadow:0 10px 24px rgba(198,54,42,.42);}
+  .cameracard h3{font-family:var(--display);font-weight:800;font-size:22px;margin:0;color:var(--ink);}
+  /* --- home: pulsanti soffici --- */
+  .softbtn{background:var(--paper);border:1.5px solid var(--line);border-radius:16px;padding:14px;font-weight:700;font-size:15px;color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 12px rgba(150,100,30,.07);transition:transform .08s ease, box-shadow .2s ease;}
+  .softbtn:active{transform:translateY(1px);box-shadow:0 2px 8px rgba(150,100,30,.08);}
+  /* --- home: stepper --- */
+  .stepper{position:relative;display:flex;justify-content:space-between;margin-top:34px;}
+  .stepper::before{content:"";position:absolute;left:15%;right:15%;top:15px;height:2px;background:repeating-linear-gradient(90deg,var(--line) 0 6px,transparent 6px 11px);}
+  .stepc{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:8px;width:33%;}
+  .stepc .dot{width:32px;height:32px;border-radius:999px;background:#fff;border:2px solid var(--tomato);color:var(--tomato);font-family:var(--mono);font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(198,54,42,.14);}
+  .stepc .cap{font-size:12.5px;color:var(--inkSoft);text-align:center;line-height:1.2;font-weight:600;}
+  .pad{padding:26px 20px 40px;flex:1;}
+  .back{background:none;border:none;color:var(--inkSoft);font-size:14px;cursor:pointer;padding:0;font-weight:600;}
+  .btn{border-radius:12px;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);font-weight:700;font-size:15px;cursor:pointer;padding:13px;}
+  .btn:active,.cta:active{transform:translateY(1px);}
+  .cta{border:none;background:var(--tomato);color:var(--paper);font-family:var(--display);font-weight:800;font-size:17px;cursor:pointer;border-radius:14px;padding:16px;box-shadow:0 6px 16px rgba(198,54,42,.34);width:100%;}
+  .row{display:flex;gap:10px;}
+  .viewfinder{width:100%;aspect-ratio:4/3;border-radius:18px;border:2.5px dashed var(--tomato);background:var(--paper);position:relative;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;overflow:hidden;}
+  .vf-corner{position:absolute;width:26px;height:26px;border:0 solid var(--tomato);border-radius:4px;}
+  .banner{margin-top:16px;border-radius:12px;padding:11px 14px;font-size:14px;font-weight:600;}
+  .banner.err{background:#F6DCD8;border:1.5px solid var(--tomato);color:var(--tomatoDark);}
+  .banner.ok{background:var(--basilTint);border:1.5px solid var(--basil);color:var(--basil);}
+  .banner.info{background:#FBF0D6;border:1.5px solid var(--crust);color:#8a6300;}
+  .thumb{position:relative;width:68px;height:68px;border-radius:10px;overflow:hidden;border:1.5px solid var(--line);background:var(--paperShade);}
+  .thumb img{width:100%;height:100%;object-fit:cover;}
+  .thumb .x{position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:999px;border:none;background:rgba(0,0,0,.62);color:#fff;font-size:11px;line-height:1;cursor:pointer;}
+  .addph{width:68px;height:68px;border-radius:10px;border:1.5px dashed var(--tomato);background:var(--paper);color:var(--tomato);font-size:26px;cursor:pointer;}
+  .steps{margin-top:30px;display:flex;gap:8px;}
+  .step{flex:1;text-align:center;}
+  .step .n{font-family:var(--mono);color:var(--tomato);font-weight:700;font-size:13px;}
+  .step .t{font-size:12.5px;color:var(--inkSoft);margin-top:2px;}
+  .chip{padding:7px 12px;border-radius:999px;font-size:14px;font-weight:500;cursor:pointer;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);display:inline-flex;align-items:center;gap:6px;user-select:none;transition:transform .08s ease;}
+  .chip:active{transform:scale(.94);}
+  .chip[data-state="want"]{background:var(--basilTint);border-color:var(--basil);color:var(--basil);font-weight:700;}
+  .chip[data-state="avoid"]{background:#F6DCD8;border-color:var(--tomato);color:var(--tomatoDark);text-decoration:line-through;}
+  .chip .mk{font-weight:800;}
+  .wrap{display:flex;flex-wrap:wrap;gap:8px;}
+  .sticky{position:sticky;bottom:0;padding:14px 20px calc(14px + env(safe-area-inset-bottom));background:linear-gradient(rgba(241,228,195,0),var(--dough) 26%);}
+  .center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;gap:18px;text-align:center;}
+  .spin{font-size:60px;animation:spin 1.6s linear infinite;}
+  .bar{width:220px;height:10px;border-radius:999px;background:var(--paperShade);border:1.5px solid var(--line);overflow:hidden;}
+  .bar>i{display:block;height:100%;background:var(--tomato);width:0;transition:width .2s ease;}
+  .ticket{position:relative;margin-bottom:18px;}
+  .ticket .paper{background:var(--paper);padding:10px 16px 16px;border-radius:0 0 8px 8px;box-shadow:0 6px 16px rgba(60,40,10,.12);}
+  .ticket h3{font-family:var(--display);font-weight:800;font-size:23px;margin:0;line-height:1.05;}
+  .ord{font-family:var(--mono);font-size:10px;color:var(--inkSoft);letter-spacing:2px;}
+  .price{font-family:var(--mono);font-size:14px;color:var(--tomato);font-weight:700;margin-top:2px;}
+  .dash{height:0;border-top:1.5px dashed var(--line);margin:12px 0 10px;}
+  .ilist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px;}
+  .ilist li{font-size:15px;display:flex;align-items:center;gap:8px;}
+  .ilist .b{width:14px;font-family:var(--mono);font-size:12px;}
+  .stamp{position:absolute;top:16px;right:14px;transform:rotate(-9deg);mix-blend-mode:multiply;pointer-events:none;text-align:center;font-family:var(--mono);border:2.5px solid;border-radius:12px;padding:5px 11px 4px;opacity:.92;}
+  .stamp .p{font-size:24px;font-weight:700;line-height:1;}
+  .stamp .m{font-size:8px;letter-spacing:3px;margin-top:1px;font-weight:700;}
+  .ribbon{position:absolute;top:-13px;left:14px;z-index:3;transform:rotate(-2deg);background:var(--tomato);color:var(--paper);font-family:var(--mono);font-weight:700;font-size:11px;letter-spacing:1px;padding:3px 10px;border-radius:4px;box-shadow:0 3px 8px rgba(0,0,0,.18);}
+  .card{background:var(--paper);border:1.5px solid var(--line);border-radius:14px;padding:12px;margin-bottom:12px;}
+  .in{padding:10px 12px;border-radius:10px;border:1.5px solid var(--line);font-family:var(--body);font-size:15px;background:var(--paperShade);color:var(--ink);width:100%;}
+  .mini{border:none;background:none;color:var(--tomato);cursor:pointer;font-weight:800;font-size:13px;line-height:1;padding:0;}
+  .savedrow{display:flex;align-items:center;gap:8px;background:var(--paper);border:1.5px solid var(--line);border-radius:14px;padding:6px 8px 6px 14px;margin-bottom:10px;}
+  .icobtn{width:38px;height:38px;border-radius:10px;border:1.5px solid var(--line);background:var(--paperShade);cursor:pointer;font-size:15px;}
+  .muted{font-size:12.5px;color:var(--inkSoft);}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  @keyframes bob{0%,100%{transform:translateY(0);}50%{transform:translateY(-8px);}}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:none;}}
+  .fade{animation:fadeUp .45s cubic-bezier(.2,.7,.3,1) both;}
+  @media (prefers-reduced-motion: reduce){*{animation:none!important;}}
+</style>
+</head>
+<body>
+<div id="app"><div style="padding:44px 24px;text-align:center;font-family:system-ui,-apple-system,sans-serif;color:#8A7A63">
+  <div style="font-size:44px">🍕</div>
+  <p style="margin-top:10px;line-height:1.5">Sto caricando l'app…<br><span style="font-size:13px">Se resta questo messaggio, apri il file in Safari o in un browser su computer (con JavaScript attivo).</span></p>
+</div></div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   CHE PIZZA — versione senza token
+   OCR sul dispositivo (Tesseract.js) → interpretazione locale →
+   revisione → scelta gusti → classifica. Nessuna chiamata AI.
+   ============================================================ */
+
+/* ---------- vocabolario ingredienti (nome + categoria) ---------- */
+const CATS = [
+  {key:"salumi",  label:"Salumi",            icon:"🥓"},
+  {key:"formaggi",label:"Formaggi",          icon:"🧀"},
+  {key:"verdure", label:"Verdure & funghi",  icon:"🥬"},
+  {key:"pesce",   label:"Pesce",             icon:"🐟"},
+  {key:"altro",   label:"Base & altro",      icon:"✨"},
+];
+const INGREDIENTS = [
+  // formaggi
+  ["mozzarella di bufala","formaggi"],["fior di latte","formaggi"],["fiordilatte","formaggi"],["mozzarella","formaggi"],
+  ["gorgonzola","formaggi"],["provola affumicata","formaggi"],["provola","formaggi"],["scamorza affumicata","formaggi"],
+  ["scamorza","formaggi"],["parmigiano","formaggi"],["grana","formaggi"],["pecorino","formaggi"],["fontina","formaggi"],
+  ["taleggio","formaggi"],["stracchino","formaggi"],["stracciatella","formaggi"],["burrata","formaggi"],["ricotta","formaggi"],
+  ["brie","formaggi"],["emmental","formaggi"],["caciocavallo","formaggi"],["asiago","formaggi"],["squacquerone","formaggi"],
+  ["caprino","formaggi"],["feta","formaggi"],["philadelphia","formaggi"],["formaggio","formaggi"],
+  // salumi
+  ["salame piccante","salumi"],["salamino piccante","salumi"],["salame","salumi"],["salsiccia","salumi"],
+  ["prosciutto cotto","salumi"],["prosciutto crudo","salumi"],["prosciutto","salumi"],["speck","salumi"],
+  ["pancetta","salumi"],["guanciale","salumi"],["mortadella","salumi"],["bresaola","salumi"],["'nduja","salumi"],
+  ["nduja","salumi"],["spianata piccante","salumi"],["spianata","salumi"],["coppa","salumi"],["capocollo","salumi"],
+  ["porchetta","salumi"],["wurstel","salumi"],["würstel","salumi"],["bacon","salumi"],["soppressata","salumi"],["lardo","salumi"],
+  // pesce
+  ["acciughe","pesce"],["alici","pesce"],["tonno","pesce"],["salmone affumicato","pesce"],["salmone","pesce"],
+  ["gamberetti","pesce"],["gamberi","pesce"],["gambero","pesce"],["vongole","pesce"],["cozze","pesce"],
+  ["frutti di mare","pesce"],["calamari","pesce"],["totani","pesce"],["polpo","pesce"],["pesce spada","pesce"],
+  ["baccalà","pesce"],["sardine","pesce"],["branzino","pesce"],
+  // verdure & funghi
+  ["funghi porcini","verdure"],["porcini","verdure"],["funghi champignon","verdure"],["champignon","verdure"],
+  ["funghi","verdure"],["carciofini","verdure"],["carciofi","verdure"],["olive nere","verdure"],["olive verdi","verdure"],
+  ["olive","verdure"],["cipolla di tropea","verdure"],["cipolla rossa","verdure"],["cipolla","verdure"],["cipolle","verdure"],
+  ["zucchine","verdure"],["melanzane","verdure"],["peperonata","verdure"],["peperoni","verdure"],["peperoncino","verdure"],
+  ["rucola","verdure"],["spinaci","verdure"],["radicchio","verdure"],["patatine fritte","verdure"],["patatine","verdure"],
+  ["patate","verdure"],["mais","verdure"],["broccoli","verdure"],["friarielli","verdure"],["cime di rapa","verdure"],
+  ["pomodori secchi","verdure"],["pomodorini","verdure"],["datterini","verdure"],["ciliegino","verdure"],["basilico","verdure"],
+  ["prezzemolo","verdure"],["aglio","verdure"],["origano","verdure"],["rosmarino","verdure"],["capperi","verdure"],
+  ["insalata","verdure"],["songino","verdure"],["zucca","verdure"],["asparagi","verdure"],["scarola","verdure"],
+  ["fiori di zucca","verdure"],["carote","verdure"],["porri","verdure"],
+  // base & altro
+  ["pomodoro san marzano","altro"],["pomodoro","altro"],["pelati","altro"],["passata","altro"],["salsa","altro"],
+  ["panna","altro"],["besciamella","altro"],["uova","altro"],["uovo","altro"],["tartufo nero","altro"],
+  ["crema di tartufo","altro"],["tartufo","altro"],["miele","altro"],["granella di pistacchio","altro"],
+  ["pistacchio","altro"],["noci","altro"],["nutella","altro"],["olio evo","altro"],["glassa","altro"],
+].map(([name,cat])=>({name,cat}));
+
+const VOCAB_SORTED = [...INGREDIENTS].sort((a,b)=>b.name.length-a.name.length);
+const CAT_OF = (() => { const m={}; INGREDIENTS.forEach(i=>{ if(!(i.name in m)) m[i.name]=i.cat; }); return m; })();
+
+function categorize(name){
+  const n=name.toLowerCase().trim();
+  if(CAT_OF[n]) return CAT_OF[n];
+  for(const it of VOCAB_SORTED){ if(n.includes(it.name)||it.name.includes(n)) return it.cat; }
+  return "altro";
+}
+const isLetter = c => !!c && /[a-zà-ÿ]/i.test(c);
+
+/* ---------- OCR: dal testo alle pizze ---------- */
+function scanIngredients(text){
+  let s = " " + text.toLowerCase().replace(/[.;:_/|]/g," ") + " ";
+  const found=[];
+  for(const item of VOCAB_SORTED){
+    const name=item.name; let from=0, idx;
+    while((idx=s.indexOf(name,from))!==-1){
+      const before=s[idx-1], after=s[idx+name.length];
+      if(!isLetter(before)&&!isLetter(after)){
+        found.push(item.name);
+        s = s.slice(0,idx) + " ".repeat(name.length) + s.slice(idx+name.length);
+        from = idx + name.length;
+      } else { from = idx + 1; }
+    }
+  }
+  return { found, leftover:s };
+}
+function titleCase(str){
+  return str.toLowerCase().split(/\s+/).filter(Boolean)
+    .map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(" ");
+}
+function parseMenuText(text){
+  const lines = text.split(/\r?\n/).map(l=>l.replace(/\s+/g," ").trim()).filter(l=>l.length>1);
+  const priceRe = /(?:€\s*)?(\d{1,2})[.,](\d{2})(?:\s*€)?/;
+  const pizzas=[]; let current=null;
+  for(let line of lines){
+    let prezzo=null;
+    const pm=line.match(priceRe);
+    if(pm){ prezzo=pm[1]+"."+pm[2]; line=line.replace(priceRe," ").trim(); }
+    const {found, leftover}=scanIngredients(line);
+    const letters=(line.match(/[A-Za-zÀ-ÿ]/g)||[]).length;
+    if(letters<2 && !found.length){ if(prezzo&&current&&!current.prezzo)current.prezzo=prezzo; continue; }
+
+    let name=leftover.replace(/[•·\-–—*"'()]/g," ").replace(/\s+/g," ").trim();
+    const nameWords=name.split(" ").filter(w=>w.length>1 && /[A-Za-zÀ-ÿ]/.test(w));
+    const hasName = nameWords.length>=1 && nameWords.length<=5 && /[A-Za-zÀ-ÿ]{3,}/.test(name);
+    const mostlyIngredients = found.length>=1 && !hasName;
+
+    if(mostlyIngredients){
+      if(current){ current.ingredienti.push(...found); if(prezzo&&!current.prezzo)current.prezzo=prezzo; }
+    } else if(hasName){
+      current={ nome:titleCase(nameWords.join(" ")), ingredienti:[...found], prezzo:prezzo };
+      pizzas.push(current);
+    } else if(current){
+      current.ingredienti.push(...found); if(prezzo&&!current.prezzo)current.prezzo=prezzo;
+    }
+  }
+  return pizzas
+    .map(p=>({nome:p.nome, prezzo:p.prezzo||null, ingredienti:[...new Set(p.ingredienti)]}))
+    .filter(p=>p.nome && p.ingredienti.length>=1);
+}
+
+/* ---------- decodifica immagine → JPEG dataURL (per OCR) ---------- */
+function readAsDataURL(file){
+  return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(String(r.result||"")); r.onerror=()=>rej(new Error("Non riesco ad aprire il file.")); r.readAsDataURL(file); });
+}
+function drawToJpeg(src,sw,sh,maxDim){
+  try{
+    const scale=Math.min(1,maxDim/Math.max(sw,sh));
+    const w=Math.max(1,Math.round(sw*scale)), h=Math.max(1,Math.round(sh*scale));
+    const cv=document.createElement("canvas"); cv.width=w; cv.height=h;
+    const ctx=cv.getContext("2d"); if(!ctx) return null;
+    ctx.drawImage(src,0,0,w,h);
+    const out=cv.toDataURL("image/jpeg",0.9);
+    return out&&out.length>100?out:null;
+  }catch{ return null; }
+}
+async function fileToJpeg(file, maxDim=1800){
+  try{ if(typeof createImageBitmap==="function"){ const b=await createImageBitmap(file); const j=drawToJpeg(b,b.width,b.height,maxDim); if(b.close)b.close(); if(j)return j; } }catch{}
+  let dataUrl=""; try{ dataUrl=await readAsDataURL(file); }catch{ dataUrl=""; }
+  if(dataUrl){
+    const viaImg=await new Promise(res=>{ try{ const im=new Image(); im.onload=()=>res(drawToJpeg(im,im.naturalWidth||im.width,im.naturalHeight||im.height,maxDim)); im.onerror=()=>res(null); im.src=dataUrl; }catch{ res(null); } });
+    if(viaImg) return viaImg;
+    if(/^data:image\/(jpeg|png|webp)/.test(dataUrl)) return dataUrl; // ci prova comunque
+  }
+  throw new Error("Foto non leggibile (spesso è il formato HEIC dell'iPhone). Usa uno screenshot o imposta la fotocamera su «Massima compatibilità».");
+}
+
+/* ---------- storage locale (menu salvati) ---------- */
+const LS_KEY="chepizza:menus";
+let memMenus=null; // fallback in memoria se localStorage non disponibile
+let storagePersistent=true;
+function loadMenus(){
+  try{ const raw=localStorage.getItem(LS_KEY); return raw?JSON.parse(raw):[]; }
+  catch{ storagePersistent=false; return memMenus||(memMenus=[]); }
+}
+function saveMenus(arr){
+  try{ localStorage.setItem(LS_KEY,JSON.stringify(arr)); }
+  catch{ storagePersistent=false; memMenus=arr; }
+}
+
+// L'OCR gira in un Web Worker: in alcune anteprime sandbox è bloccato.
+// Facciamo una prova rapida per avvisare l'utente prima che perda tempo.
+function ocrBlockedReason(){
+  try{
+    const blob=new Blob(["self.onmessage=function(){}"],{type:"text/javascript"});
+    const url=URL.createObjectURL(blob);
+    const w=new Worker(url);
+    w.terminate(); URL.revokeObjectURL(url);
+    return null;
+  }catch(e){ return (e&&e.message)||"blocked"; }
+}
+
+/* ---------- menu d'esempio ---------- */
+const DEMO=[
+  {nome:"Margherita",prezzo:"6.50",ingredienti:["pomodoro","mozzarella","basilico"]},
+  {nome:"Diavola",prezzo:"8.00",ingredienti:["pomodoro","mozzarella","salame piccante"]},
+  {nome:"Capricciosa",prezzo:"9.00",ingredienti:["pomodoro","mozzarella","prosciutto cotto","funghi","carciofi","olive"]},
+  {nome:"Quattro Formaggi",prezzo:"8.50",ingredienti:["mozzarella","gorgonzola","fontina","parmigiano"]},
+  {nome:"Bufalina",prezzo:"9.50",ingredienti:["pomodoro","mozzarella di bufala","basilico"]},
+  {nome:"Boscaiola",prezzo:"9.00",ingredienti:["mozzarella","salsiccia","porcini","panna"]},
+  {nome:"Tonno e Cipolla",prezzo:"8.00",ingredienti:["pomodoro","mozzarella","tonno","cipolla"]},
+  {nome:"Vegetariana",prezzo:"8.50",ingredienti:["pomodoro","mozzarella","zucchine","melanzane","peperoni","funghi"]},
+  {nome:"Crudo e Bufala",prezzo:"11.00",ingredienti:["mozzarella di bufala","prosciutto crudo","pomodoro","rucola"]},
+];
+
+/* ============================ STATO + RENDER ============================ */
+const S = {
+  screen:"capture",
+  pending:[],            // {file,url}
+  draft:[],              // pizze da rivedere
+  pizze:[], prefs:{}, hideExcluded:false,
+  ocr:{status:"",pct:0,i:0,total:0},
+  error:"", notice:"",
+  saved: loadMenus(),
+  editId:null, saveOpen:false,
+  ocrBlocked:false,
+};
+const app=document.getElementById("app");
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+function catalogFrom(pizze){
+  const counts=new Map();
+  pizze.forEach(p=>p.ingredienti.forEach(n=>counts.set(n,(counts.get(n)||0)+1)));
+  return [...counts.keys()]
+    .map(nome=>({nome,categoria:categorize(nome),count:counts.get(nome)}))
+    .sort((a,b)=>b.count-a.count||a.nome.localeCompare(b.nome));
+}
+
+function render(){
+  if(S.screen==="capture") return renderCapture();
+  if(S.screen==="analyzing") return renderAnalyzing();
+  if(S.screen==="review") return renderReview();
+  if(S.screen==="prefs") return renderPrefs();
+  if(S.screen==="results") return renderResults();
+}
+
+/* ---------------- CAPTURE ---------------- */
+function renderCapture(){
+  const corners=["tl","tr","bl","br"].map(c=>{
+    const st=[`${c[0]==="t"?"top:18px":"bottom:18px"}`,`${c[1]==="l"?"left:18px":"right:18px"}`,
+      `border-top-width:${c[0]==="t"?3:0}px`,`border-bottom-width:${c[0]==="b"?3:0}px`,
+      `border-left-width:${c[1]==="l"?3:0}px`,`border-right-width:${c[1]==="r"?3:0}px`].join(";");
+    return `<span class="vfc" style="${st}"></span>`;
+  }).join("");
+  const mark=`<svg viewBox="0 0 40 40" width="34" height="34" aria-hidden="true">
+    <path d="M20 4 L33.5 30 C28 33.4 12 33.4 6.5 30 Z" fill="#F2C24E"/>
+    <path d="M6.5 30 C12 33.4 28 33.4 33.5 30 L35.4 33.4 C29 37.2 11 37.2 4.6 33.4 Z" fill="#E19A34"/>
+    <circle cx="16" cy="20" r="2.5" fill="#C6362A"/><circle cx="24.5" cy="24" r="2.5" fill="#C6362A"/>
+    <circle cx="21" cy="14.5" r="1.9" fill="#C6362A"/>
+    <path d="M17.6 27 l2 -2 2 2 -2 2 z" fill="#4C6B34"/>
+  </svg>`;
+
+  const pending = S.pending.length ? `
+    <div style="margin-top:18px">
+      <div class="label" style="margin-bottom:9px">${S.pending.length} FOTO IN CODA</div>
+      <div class="wrap">
+        ${S.pending.map((p,i)=>`
+          <div class="thumb">
+            ${p.url?`<img src="${p.url}" alt="">`:`<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:24px">📄</div>`}
+            <button class="x" data-rm="${i}" aria-label="Rimuovi foto">✕</button>
+          </div>`).join("")}
+        <button class="addph" data-add-photo aria-label="Aggiungi foto">+</button>
+      </div>
+      <button class="cta" data-read style="margin-top:14px">Leggi il menu · ${S.pending.length} foto →</button>
+    </div>` : "";
+
+  const saved = S.saved.length ? `
+    <div style="margin-top:30px">
+      <div class="label" style="margin-bottom:12px">💾 I TUOI MENU${storagePersistent?"":" · solo per questa sessione"}</div>
+      ${S.saved.map(m=> S.editId===m.id ? savedEdit(m) : savedRow(m)).join("")}
+    </div>` : "";
+
+  app.innerHTML = `
+    <div class="pad fade">
+      <div class="brand">
+        ${mark}
+        <div class="wm">Che Pizza</div>
+        <span class="freebadge">SENZA TOKEN</span>
+      </div>
+
+      <h1 style="margin-top:20px">Che pizza<br><span style="color:var(--tomato)">fa per te?</span></h1>
+      <p class="lead">Fotografa il menu: lo leggo qui sul dispositivo, tu scegli cosa vuoi nel piatto e ti ordino le pizze dalla più adatta.</p>
+
+      <div class="cameracard" data-add-photo>
+        <div class="frame"></div>
+        ${corners}
+        <div class="camerabtn">📸</div>
+        <h3>Scatta il menu</h3>
+        <div class="muted" style="margin-top:4px">tocca per fotografare · più foto ok</div>
+      </div>
+
+      <div class="row" style="margin-top:12px">
+        <button class="softbtn" data-gallery style="flex:1">🖼️ Galleria</button>
+        <button class="softbtn" data-demo style="flex:1">🍕 Esempio</button>
+      </div>
+      <button class="softbtn" data-manual style="width:100%;margin-top:10px">✍️ Inserisci un menu a mano</button>
+
+      ${S.ocrBlocked?`<div class="banner info" style="margin-top:16px">Per leggere il menu dalle foto, <b>scarica questo file e aprilo nel tuo browser</b>: in questa anteprima la lettura sul dispositivo è bloccata. Intanto puoi usare «Inserisci a mano» o il menu d'esempio.</div>`:""}
+
+      ${pending}
+      ${S.error?`<div class="banner err">${esc(S.error)}</div>`:""}
+
+      <div class="stepper">
+        <div class="stepc"><div class="dot">1</div><div class="cap">Scatta</div></div>
+        <div class="stepc"><div class="dot">2</div><div class="cap">Rivedi &amp; scegli</div></div>
+        <div class="stepc"><div class="dot">3</div><div class="cap">Trova la pizza</div></div>
+      </div>
+
+      ${saved}
+    </div>`;
+
+  // input file nascosti (ricreati ogni render)
+  const cam=document.createElement("input"); cam.type="file"; cam.accept="image/*"; cam.capture="environment"; cam.style.display="none";
+  const gal=document.createElement("input"); gal.type="file"; gal.accept="image/*"; gal.multiple=true; gal.style.display="none";
+  app.appendChild(cam); app.appendChild(gal);
+  cam.onchange=()=>{ addFiles(cam.files); cam.value=""; };
+  gal.onchange=()=>{ addFiles(gal.files); gal.value=""; };
+
+  app.querySelectorAll("[data-add-photo]").forEach(b=>b.onclick=()=>cam.click());
+  app.querySelector("[data-gallery]").onclick=()=>gal.click();
+  app.querySelector("[data-demo]").onclick=()=>useDemo();
+  app.querySelector("[data-manual]").onclick=()=>manualEntry();
+  const readBtn=app.querySelector("[data-read]"); if(readBtn) readBtn.onclick=readPending;
+  app.querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>removePending(+b.dataset.rm));
+  wireSaved();
+}
+function savedRow(m){
+  return `<div class="savedrow">
+    <button data-open="${m.id}" style="flex:1;text-align:left;background:none;border:none;cursor:pointer;padding:8px 0">
+      <div style="font-family:var(--display);font-weight:800;font-size:17px;color:var(--ink)">${esc(m.name)}</div>
+      <div class="muted" style="margin-top:1px">${m.pizze.length} pizze · tocca per usarlo</div>
+    </button>
+    <button class="icobtn" data-edit="${m.id}" aria-label="Modifica">✏️</button>
+    <button class="icobtn" data-del="${m.id}" aria-label="Elimina">🗑️</button>
+  </div>`;
+}
+function savedEdit(m){
+  return `<div class="card" style="border-color:var(--crust)">
+    <div class="row">
+      <input class="in" data-editname value="${esc(m.name)}" placeholder="Nome del menu">
+      <button class="btn" data-commit style="background:var(--basil);color:#fff;border:none">OK</button>
+      <button class="btn" data-canceledit>✕</button>
+    </div>
+    <div class="label" style="margin:12px 0 8px">PIZZE · tocca ✕ per rimuovere</div>
+    <div class="wrap">
+      ${m.pizze.map(p=>`<span class="chip" style="cursor:default">${esc(p.nome)} <button class="mini" data-rmpizza="${esc(p.nome)}" aria-label="Rimuovi">✕</button></span>`).join("") || `<span class="muted">Nessuna pizza rimasta.</span>`}
+    </div>
+    <button class="btn" data-del="${m.id}" style="margin-top:12px;border-color:var(--tomato);color:var(--tomatoDark);background:none">🗑️ Elimina questo menu</button>
+  </div>`;
+}
+function wireSaved(){
+  app.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>openSaved(b.dataset.open));
+  app.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{ S.editId=b.dataset.edit; render(); });
+  app.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>deleteSaved(b.dataset.del));
+  const commit=app.querySelector("[data-commit]");
+  if(commit){
+    commit.onclick=()=>{ const v=app.querySelector("[data-editname]").value.trim(); if(v){ const m=S.saved.find(x=>x.id===S.editId); if(m)m.name=v; saveMenus(S.saved);} S.editId=null; render(); };
+    app.querySelector("[data-canceledit]").onclick=()=>{ S.editId=null; render(); };
+    app.querySelectorAll("[data-rmpizza]").forEach(b=>b.onclick=()=>{ const m=S.saved.find(x=>x.id===S.editId); if(m){ m.pizze=m.pizze.filter(p=>p.nome!==b.dataset.rmpizza); saveMenus(S.saved);} render(); });
+  }
+}
+
+/* ---------------- coda foto ---------------- */
+function addFiles(list){
+  const files=Array.from(list||[]).filter(f=>f && /^image\//.test(f.type||"image/"));
+  if(!files.length) return;
+  S.error="";
+  files.forEach(file=>{ let url=""; try{ url=URL.createObjectURL(file);}catch{} S.pending.push({file,url}); });
+  render();
+}
+function removePending(i){ const it=S.pending[i]; if(it&&it.url){try{URL.revokeObjectURL(it.url);}catch{}} S.pending.splice(i,1); render(); }
+
+/* ---------------- OCR ---------------- */
+function renderAnalyzing(){
+  const msg = S.ocr.status || "Preparo la lettura…";
+  const sub = S.ocr.total>1 ? `Foto ${S.ocr.i} di ${S.ocr.total}` : "Lettura sul dispositivo, nessun dato inviato";
+  app.innerHTML=`
+    <div class="center">
+      <div class="spin">🍕</div>
+      <div style="font-family:var(--display);font-weight:800;font-size:24px">${esc(msg)}</div>
+      <div class="bar"><i style="width:${S.ocr.pct}%"></i></div>
+      <div class="muted">${esc(sub)}</div>
+    </div>`;
+}
+function ocrStatusLabel(status){
+  if(/load.*core/i.test(status)) return "Carico il motore di lettura…";
+  if(/language|traineddata/i.test(status)) return "Scarico il modello italiano (solo al primo avvio)…";
+  if(/initial/i.test(status)) return "Inizializzo…";
+  if(/recogn/i.test(status)) return "Leggo il menu…";
+  return "Elaboro…";
+}
+async function ocrImage(dataUrl){
+  if(!window.Tesseract) throw new Error("Il motore di lettura non è disponibile. Apri il file in un browser (con connessione al primo avvio) e riprova.");
+  const { data } = await Tesseract.recognize(dataUrl, "ita", {
+    logger:m=>{ if(m&&m.status){ S.ocr.status=ocrStatusLabel(m.status); if(typeof m.progress==="number") S.ocr.pct=Math.round(m.progress*100); renderAnalyzing(); } }
+  });
+  return (data && data.text) ? data.text : "";
+}
+async function readPending(){
+  if(!S.pending.length) return;
+  S.error=""; S.notice=""; S.ocr={status:"Preparo la lettura…",pct:0,i:0,total:S.pending.length}; S.screen="analyzing"; render();
+  const merged=[]; const seen=new Set(); let failed=0; let lastErr="";
+  for(let i=0;i<S.pending.length;i++){
+    S.ocr.i=i+1; S.ocr.pct=0; renderAnalyzing();
+    try{
+      const jpeg=await fileToJpeg(S.pending[i].file);
+      const text=await ocrImage(jpeg);
+      const pizzas=parseMenuText(text);
+      for(const p of pizzas){ const k=p.nome.toLowerCase(); if(!seen.has(k)){ seen.add(k); merged.push(p); } }
+    }catch(e){ failed++; lastErr=(e&&e.message)||""; }
+  }
+  S.pending.forEach(p=>{ if(p.url){try{URL.revokeObjectURL(p.url);}catch{}} });
+  S.pending=[];
+  if(!merged.length){
+    const envBlocked=/insecure|worker|non è disponibile|blocked|security/i.test(lastErr);
+    S.error = envBlocked
+      ? "La lettura sul dispositivo è bloccata in questa anteprima. Scarica il file HTML e aprilo nel tuo browser (su iPhone: Salva su File › apri con Safari). In alternativa usa «Inserisci a mano» o il menu d'esempio."
+      : (lastErr || "Non ho riconosciuto pizze. Riprova con una foto più nitida e ben illuminata, o uno screenshot del menu.");
+    S.screen="capture"; render(); return;
+  }
+  S.draft=merged;
+  S.notice = failed ? `${failed} foto non lette. Controlla il risultato e completa a mano se serve.` : "";
+  S.screen="review"; render();
+}
+
+/* ---------------- REVIEW (correzione OCR) ---------------- */
+function renderReview(){
+  app.innerHTML=`
+    <div class="fade" style="flex:1;display:flex;flex-direction:column">
+      <div style="padding:22px 20px 10px">
+        <button class="back" data-back>‹ nuovo menu</button>
+        <h2>Rivedi il menu</h2>
+        <p class="muted" style="margin:0;line-height:1.45">L'OCR può sbagliare: correggi nomi e ingredienti, poi continua. Trovate <b>${S.draft.length}</b> pizze.</p>
+        ${S.notice?`<div class="banner info" style="margin-top:12px">${esc(S.notice)}</div>`:""}
+      </div>
+      <div style="padding:6px 20px 150px;overflow-y:auto">
+        ${S.draft.map((p,i)=>reviewCard(p,i)).join("")}
+        <button class="btn" data-addpizza style="width:100%">+ Aggiungi pizza</button>
+      </div>
+      <div class="sticky">
+        <button class="cta" data-continue>Usa questo menu →</button>
+      </div>
+    </div>`;
+
+  app.querySelector("[data-back]").onclick=()=>{ S.draft=[]; S.notice=""; S.screen="capture"; render(); };
+  app.querySelector("[data-addpizza]").onclick=()=>{ S.draft.push({nome:"Nuova pizza",prezzo:null,ingredienti:[]}); render(); };
+  app.querySelector("[data-continue]").onclick=()=>{
+    const clean=S.draft.map(p=>({nome:(p.nome||"Pizza").trim(),prezzo:p.prezzo||null,ingredienti:[...new Set(p.ingredienti)]}))
+      .filter(p=>p.ingredienti.length>=1);
+    if(!clean.length){ S.notice="Aggiungi almeno un ingrediente a una pizza per continuare."; render(); return; }
+    S.pizze=clean; S.prefs={}; S.saveOpen=false; S.screen="prefs"; render();
+  };
+
+  // eventi per card
+  S.draft.forEach((p,i)=>{
+    const nameIn=app.querySelector(`[data-name="${i}"]`);
+    if(nameIn) nameIn.oninput=()=>{ S.draft[i].nome=nameIn.value; };
+    const priceIn=app.querySelector(`[data-price="${i}"]`);
+    if(priceIn) priceIn.oninput=()=>{ S.draft[i].prezzo=priceIn.value.replace(",",".").trim()||null; };
+    app.querySelector(`[data-delp="${i}"]`).onclick=()=>{ S.draft.splice(i,1); render(); };
+    app.querySelectorAll(`[data-rmi="${i}"]`).forEach(b=>b.onclick=()=>{ S.draft[i].ingredienti=S.draft[i].ingredienti.filter(x=>x!==b.dataset.ing); render(); });
+    const addIn=app.querySelector(`[data-adding="${i}"]`);
+    if(addIn) addIn.onkeydown=(e)=>{ if(e.key==="Enter"){ const v=addIn.value.toLowerCase().trim(); if(v && !S.draft[i].ingredienti.includes(v)){ S.draft[i].ingredienti.push(v); render(); const f=app.querySelector(`[data-adding="${i}"]`); if(f)f.focus(); } } };
+  });
+}
+function reviewCard(p,i){
+  return `<div class="card">
+    <div class="row">
+      <input class="in" data-name="${i}" value="${esc(p.nome)}" placeholder="Nome pizza">
+      <input class="in" data-price="${i}" value="${p.prezzo?esc(p.prezzo):""}" placeholder="€" style="width:74px;text-align:center">
+      <button class="icobtn" data-delp="${i}" aria-label="Elimina pizza">🗑️</button>
+    </div>
+    <div class="wrap" style="margin-top:10px">
+      ${p.ingredienti.map(ing=>`<span class="chip" style="cursor:default">${esc(ing)} <button class="mini" data-rmi="${i}" data-ing="${esc(ing)}" aria-label="Rimuovi">✕</button></span>`).join("")}
+    </div>
+    <input class="in" data-adding="${i}" placeholder="+ aggiungi ingrediente e premi Invio" style="margin-top:10px;background:var(--paper)">
+  </div>`;
+}
+
+/* ---------------- PREFS ---------------- */
+function wanted(){ return Object.keys(S.prefs).filter(k=>S.prefs[k]==="want"); }
+function avoided(){ return Object.keys(S.prefs).filter(k=>S.prefs[k]==="avoid"); }
+
+function renderPrefs(){
+  const catalog=catalogFrom(S.pizze);
+  const groups=CATS.map(cat=>{
+    const items=catalog.filter(i=>i.categoria===cat.key);
+    if(!items.length) return "";
+    return `<div style="margin-top:18px">
+      <div class="label" style="margin-bottom:9px">${cat.icon} ${cat.label.toUpperCase()}</div>
+      <div class="wrap">${items.map(i=>chipHtml(i.nome)).join("")}</div>
+    </div>`;
+  }).join("");
+
+  app.innerHTML=`
+    <div class="fade" style="flex:1;display:flex;flex-direction:column">
+      <div style="padding:22px 20px 10px">
+        <button class="back" data-back>‹ modifica menu</button>
+        <h2>Cosa ti va oggi?</h2>
+        <p class="muted" style="margin:0;line-height:1.45"><b style="color:var(--basil)">1 tocco</b> = lo voglio · <b style="color:var(--tomatoDark)">2 tocchi</b> = da evitare. <b>${S.pizze.length} pizze</b> nel menu.</p>
+        ${S.notice?`<div class="banner ok" style="margin-top:12px">${esc(S.notice)}</div>`:""}
+      </div>
+      <div style="padding:0 20px 150px;overflow-y:auto">${groups}</div>
+      <div class="sticky" id="prefbar"></div>
+    </div>`;
+
+  app.querySelector("[data-back]").onclick=()=>{ S.screen="review"; S.notice=""; render(); };
+  app.querySelectorAll(".chip[data-ing]").forEach(c=>c.onclick=()=>cyclePref(c));
+  renderPrefBar();
+}
+function chipHtml(name){
+  const st=S.prefs[name]||"none";
+  const mk = st==="want"?"✓":st==="avoid"?"✕":"";
+  return `<button class="chip" data-ing="${esc(name)}" data-state="${st}">${mk?`<span class="mk">${mk}</span>`:""}${esc(name)}</button>`;
+}
+function cyclePref(chip){
+  const name=chip.dataset.ing; const cur=S.prefs[name];
+  let next; if(!cur)next="want"; else if(cur==="want")next="avoid"; else next=null;
+  if(next)S.prefs[name]=next; else delete S.prefs[name];
+  chip.dataset.state=next||"none";
+  chip.innerHTML=(next==="want"?`<span class="mk">✓</span>`:next==="avoid"?`<span class="mk">✕</span>`:"")+esc(name);
+  renderPrefBar();
+}
+function renderPrefBar(){
+  const bar=document.getElementById("prefbar"); if(!bar) return;
+  const nSel=Object.keys(S.prefs).length;
+  bar.innerHTML=`
+    ${S.saveOpen?`
+      <div class="row" style="margin-bottom:10px">
+        <input class="in" data-savename placeholder="${esc(defaultName())}" style="flex:1;background:var(--paper)">
+        <button class="btn" data-savego style="background:var(--basil);color:#fff;border:none">Salva</button>
+        <button class="btn" data-savecancel>✕</button>
+      </div>`:`
+      <button class="btn" data-saveopen style="width:100%;margin-bottom:10px">💾 Salva questo menu</button>`}
+    <div class="row" style="align-items:center">
+      ${nSel>0?`<button class="btn" data-reset style="color:var(--inkSoft)">Azzera</button>`:""}
+      <button class="cta" data-go style="flex:1">${nSel?`Trova le pizze · ${nSel} scelte →`:"Mostrami tutte le pizze →"}</button>
+    </div>`;
+  const go=bar.querySelector("[data-go]"); if(go)go.onclick=()=>{ S.screen="results"; render(); };
+  const rs=bar.querySelector("[data-reset]"); if(rs)rs.onclick=()=>{ S.prefs={}; renderPrefs(); };
+  const so=bar.querySelector("[data-saveopen]"); if(so)so.onclick=()=>{ S.saveOpen=true; renderPrefBar(); bar.querySelector("[data-savename]").focus(); };
+  const sc=bar.querySelector("[data-savecancel]"); if(sc)sc.onclick=()=>{ S.saveOpen=false; renderPrefBar(); };
+  const sg=bar.querySelector("[data-savego]"); if(sg)sg.onclick=()=>{
+    const name=(bar.querySelector("[data-savename]").value.trim())||defaultName();
+    S.saved.unshift({id:"m"+Date.now(),name,pizze:S.pizze}); saveMenus(S.saved);
+    S.saveOpen=false; S.notice=`Menu «${name}» salvato.`; renderPrefs();
+  };
+}
+function defaultName(){ const d=new Date(); return `Menu ${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}`; }
+
+/* ---------------- RESULTS ---------------- */
+function ranked(){
+  const w=wanted(), a=avoided();
+  const scored=S.pizze.map(p=>{
+    const hasAvoid=a.some(x=>p.ingredienti.includes(x));
+    const matched=w.filter(x=>p.ingredienti.includes(x));
+    const pct=w.length?Math.round(matched.length/w.length*100):0;
+    return {...p,hasAvoid,matchedCount:matched.length,pct};
+  });
+  scored.sort((x,y)=>{
+    if(x.hasAvoid!==y.hasAvoid) return x.hasAvoid?1:-1;
+    if(y.pct!==x.pct) return y.pct-x.pct;
+    if(y.matchedCount!==x.matchedCount) return y.matchedCount-x.matchedCount;
+    return x.ingredienti.length-y.ingredienti.length;
+  });
+  return scored.map((p,i)=>({...p,rank:i+1}));
+}
+function renderResults(){
+  const w=wanted(), a=avoided();
+  const all=ranked();
+  const list=S.hideExcluded?all.filter(p=>!p.hasAvoid):all;
+  const anyExcluded=all.some(p=>p.hasAvoid);
+  app.innerHTML=`
+    <div class="fade" style="flex:1;display:flex;flex-direction:column">
+      <div style="padding:22px 20px 6px">
+        <button class="back" data-back>‹ cambia i gusti</button>
+        <h2>La tua classifica</h2>
+        <div class="ord">${w.length?`${list.length} pizze · ordinate per compatibilità`:`${list.length} pizze del menu`}</div>
+        ${anyExcluded?`<label style="display:inline-flex;align-items:center;gap:7px;margin-top:10px;font-size:13.5px;color:var(--inkSoft);cursor:pointer">
+          <input type="checkbox" data-hide ${S.hideExcluded?"checked":""} style="accent-color:var(--tomato);width:16px;height:16px"> nascondi quelle con ingredienti da evitare</label>`:""}
+      </div>
+      <div style="padding:16px 18px 30px;overflow-y:auto;flex:1">
+        ${list.map((p,i)=>ticketHtml(p,w,a,i===0&&w.length>0)).join("")}
+        <button class="btn" data-new style="width:100%;margin-top:8px">📸 Leggi un altro menu</button>
+      </div>
+    </div>`;
+  app.querySelector("[data-back]").onclick=()=>{ S.screen="prefs"; render(); };
+  const hb=app.querySelector("[data-hide]"); if(hb)hb.onchange=()=>{ S.hideExcluded=hb.checked; render(); };
+  app.querySelector("[data-new]").onclick=()=>{ S.pizze=[]; S.prefs={}; S.notice=""; S.screen="capture"; render(); };
+}
+function ticketHtml(p,w,a,top){
+  const showPct = w.length>0 && !p.hasAvoid;
+  const col = p.pct>=70?"var(--basil)":p.pct>=40?"var(--crust)":"var(--tomato)";
+  let d="M0,8"; for(let x=0;x<=100;x+=5)d+=` L${x},0 L${x+2.5},8`; d+=" L100,8 Z";
+  const tear=`<svg viewBox="0 0 100 8" preserveAspectRatio="none" style="display:block;width:100%;height:9px"><path d="${d}" fill="var(--paper)"/></svg>`;
+  const items=p.ingredienti.map(ing=>{
+    const want=w.includes(ing), avoid=a.includes(ing);
+    const color=avoid?"var(--tomatoDark)":want?"var(--basil)":"var(--ink)";
+    const weight=want||avoid?700:400;
+    const deco=avoid?"line-through":"none";
+    const b=avoid?"✕":want?"✓":"·";
+    const bcol=avoid?"var(--tomato)":want?"var(--basil)":"var(--line)";
+    return `<li style="color:${color};font-weight:${weight};text-decoration:${deco}"><span class="b" style="color:${bcol}">${b}</span>${esc(ing)}</li>`;
+  }).join("");
+  return `<div class="ticket" style="${p.hasAvoid?"filter:grayscale(.55) opacity(.62)":""}">
+    ${top?`<div class="ribbon">★ LA PIÙ ADATTA</div>`:""}
+    ${tear}
+    <div class="paper">
+      ${showPct?`<div class="stamp" style="border-color:${col};color:${col}"><div class="p">${p.pct}%</div><div class="m">MATCH</div></div>`:""}
+      <div class="ord">ORDINE #${String(p.rank).padStart(2,"0")}</div>
+      <div style="padding-right:${showPct?74:0}px"><h3>${esc(p.nome)}</h3></div>
+      ${p.prezzo?`<div class="price">€ ${esc(p.prezzo)}</div>`:""}
+      <div class="dash"></div>
+      <ul class="ilist">${items}</ul>
+      ${p.hasAvoid?`<div style="margin-top:10px;font-family:var(--mono);font-size:11px;color:var(--tomatoDark);font-weight:700">contiene qualcosa che vuoi evitare</div>`:""}
+    </div>
+  </div>`;
+}
+
+/* ---------------- azioni menu ---------------- */
+function useDemo(){ S.error=""; S.notice=""; S.draft=DEMO.map(p=>({...p,ingredienti:[...p.ingredienti]})); S.screen="review"; render(); }
+function manualEntry(){ S.error=""; S.notice=""; S.draft=[{nome:"Nuova pizza",prezzo:null,ingredienti:[]}]; S.screen="review"; render(); }
+function openSaved(id){ const m=S.saved.find(x=>x.id===id); if(!m)return; S.error=""; S.notice=""; S.pizze=m.pizze.map(p=>({...p,ingredienti:[...p.ingredienti]})); S.prefs={}; S.saveOpen=false; S.screen="prefs"; render(); }
+function deleteSaved(id){ S.saved=S.saved.filter(m=>m.id!==id); saveMenus(S.saved); if(S.editId===id)S.editId=null; render(); }
+
+/* ---------------- avvio ---------------- */
+try {
+  render();
+} catch(e){
+  var box=document.getElementById("app");
+  if(box) box.innerHTML='<div style="padding:44px 24px;text-align:center;font-family:system-ui,sans-serif;color:#9E271D">'
+    +'<div style="font-size:44px">🍕</div>'
+    +'<p style="margin-top:10px;line-height:1.5">Errore di avvio dell\'app.<br><span style="font-size:13px;color:#8A7A63">'
+    +(e&&e.message?String(e.message):"")+'</span></p>'
+    +'<p style="font-size:13px;color:#8A7A63">Prova ad aprire il file in un browser aggiornato su computer.</p></div>';
+}
+</script>
+</body>
+</html>
