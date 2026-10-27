@@ -187,46 +187,74 @@ const isLetter = c => !!c && /[a-zà-ÿ]/i.test(c);
 /* ---------- OCR: dal testo alle pizze ---------- */
 function scanIngredients(text){
   let s = " " + text.toLowerCase().replace(/[.;:_/|]/g," ") + " ";
-  const found=[];
+  const found=[]; let firstIdx=-1;
   for(const item of VOCAB_SORTED){
     const name=item.name; let from=0, idx;
     while((idx=s.indexOf(name,from))!==-1){
       const before=s[idx-1], after=s[idx+name.length];
       if(!isLetter(before)&&!isLetter(after)){
         found.push(item.name);
+        if(firstIdx<0||idx<firstIdx) firstIdx=idx;
         s = s.slice(0,idx) + " ".repeat(name.length) + s.slice(idx+name.length);
         from = idx + name.length;
       } else { from = idx + 1; }
     }
   }
-  return { found, leftover:s };
+  return { found, leftover:s, firstIdx: firstIdx<0 ? -1 : firstIdx-1 }; // -1 compensa lo spazio iniziale
 }
 function titleCase(str){
   return str.toLowerCase().split(/\s+/).filter(Boolean)
     .map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(" ");
 }
+// parole che NON sono mai un nome di pizza (intestazioni, bevande, ecc.)
+const STOP_LINES = /^(menu|men[uù]|pizze|pizza|le nostre|classiche|speciali|bianche|rosse|bibite|bevande|birre|dolci|antipasti|contorni|coperto|prezzi?|allergeni|impasto|farina)\b/i;
+
+function cleanName(s){
+  return s.replace(/[•·°*"'“”()\[\]]/g," ")
+          .replace(/[-–—:]+/g," ")
+          .replace(/\b(pizza|la|le|il)\b/gi," ")
+          .replace(/\s+/g," ").trim();
+}
+
 function parseMenuText(text){
   const lines = text.split(/\r?\n/).map(l=>l.replace(/\s+/g," ").trim()).filter(l=>l.length>1);
   const priceRe = /(?:€\s*)?(\d{1,2})[.,](\d{2})(?:\s*€)?/;
   const pizzas=[]; let current=null;
-  for(let line of lines){
-    let prezzo=null;
+
+  for(let raw of lines){
+    if(STOP_LINES.test(raw) && scanIngredients(raw).found.length===0) continue;
+
+    let line=raw, prezzo=null;
     const pm=line.match(priceRe);
     if(pm){ prezzo=pm[1]+"."+pm[2]; line=line.replace(priceRe," ").trim(); }
-    const {found, leftover}=scanIngredients(line);
+
+    // divisore esplicito nome/ingredienti sulla stessa riga: "Diavola - pomodoro, ..."
+    let tailHadSplit=false, splitHead="";
+    const sep=line.match(/^(.{2,40}?)\s*[:\-–—]\s+(.+)$/);
+    if(sep){ splitHead=sep[1]; tailHadSplit=true; }
+
+    const scan = scanIngredients(line);
+    const found = scan.found;
     const letters=(line.match(/[A-Za-zÀ-ÿ]/g)||[]).length;
     if(letters<2 && !found.length){ if(prezzo&&current&&!current.prezzo)current.prezzo=prezzo; continue; }
 
-    let name=leftover.replace(/[•·\-–—*"'()]/g," ").replace(/\s+/g," ").trim();
-    const nameWords=name.split(" ").filter(w=>w.length>1 && /[A-Za-zÀ-ÿ]/.test(w));
-    const hasName = nameWords.length>=1 && nameWords.length<=5 && /[A-Za-zÀ-ÿ]{3,}/.test(name);
-    const mostlyIngredients = found.length>=1 && !hasName;
+    // da dove prendere il nome:
+    let nameSrc;
+    if(tailHadSplit)            nameSrc = splitHead;              // "Nome - ingredienti"
+    else if(found.length===0)   nameSrc = line;                  // riga di solo nome
+    else if(scan.firstIdx>2)    nameSrc = line.slice(0, scan.firstIdx); // nome + ingredienti sulla stessa riga
+    else                        nameSrc = "";                    // riga che inizia con ingredienti
 
-    if(mostlyIngredients){
-      if(current){ current.ingredienti.push(...found); if(prezzo&&!current.prezzo)current.prezzo=prezzo; }
-    } else if(hasName){
+    const name = cleanName(nameSrc);
+    const nameWords=name.split(" ").filter(w=>w.length>=2 && /[A-Za-zÀ-ÿ]/.test(w));
+    const hasName = nameWords.length>=1 && nameWords.length<=5 && /[A-Za-zÀ-ÿ]{3,}/.test(name);
+    const onlyIngredients = found.length>=1 && !hasName;
+
+    if(hasName){
       current={ nome:titleCase(nameWords.join(" ")), ingredienti:[...found], prezzo:prezzo };
       pizzas.push(current);
+    } else if(onlyIngredients && current){
+      current.ingredienti.push(...found); if(prezzo&&!current.prezzo)current.prezzo=prezzo;
     } else if(current){
       current.ingredienti.push(...found); if(prezzo&&!current.prezzo)current.prezzo=prezzo;
     }
@@ -242,12 +270,32 @@ function readAsDataURL(file){
 }
 function drawToJpeg(src,sw,sh,maxDim){
   try{
-    const scale=Math.min(1,maxDim/Math.max(sw,sh));
+    // Scala per dare a Tesseract una buona risoluzione: ingrandisci il testo
+    // piccolo (screenshot/foto lontane), limita le foto molto grandi.
+    const long=Math.max(sw,sh);
+    let scale = long>=1600 ? Math.min(1,2400/long) : Math.min(2.2,2000/long);
     const w=Math.max(1,Math.round(sw*scale)), h=Math.max(1,Math.round(sh*scale));
     const cv=document.createElement("canvas"); cv.width=w; cv.height=h;
-    const ctx=cv.getContext("2d"); if(!ctx) return null;
+    const ctx=cv.getContext("2d",{willReadFrequently:true}); if(!ctx) return null;
+    ctx.imageSmoothingQuality="high";
     ctx.drawImage(src,0,0,w,h);
-    const out=cv.toDataURL("image/jpeg",0.9);
+    // Preprocessing: scala di grigi + contrasto forte + inversione sfondi scuri.
+    try{
+      const img=ctx.getImageData(0,0,w,h), d=img.data;
+      let sum=0;
+      for(let i=0;i<d.length;i+=4){
+        const g=d[i]*0.299+d[i+1]*0.587+d[i+2]*0.114;
+        d[i]=d[i+1]=d[i+2]=g; sum+=g;
+      }
+      const mean=sum/(d.length/4), invert=mean<110;
+      for(let i=0;i<d.length;i+=4){
+        let g=(d[i]-128)*1.6+128;      // spinge il contrasto
+        if(invert) g=255-g;            // menu scuro → testo scuro su chiaro
+        d[i]=d[i+1]=d[i+2]= g<0?0:g>255?255:g;
+      }
+      ctx.putImageData(img,0,0);
+    }catch{ /* canvas tainted o memoria: usa l'immagine non trattata */ }
+    const out=cv.toDataURL("image/jpeg",0.92);
     return out&&out.length>100?out:null;
   }catch{ return null; }
 }
